@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="p2p.js"></script>
+</head>
+<body>
+    <h1>サンプル１</h1>
+    <p>普通に、双方向モードで接続した場合</p>
+    <div style="background-color:cornflowerblue;">TERM 1</div>
+    <div style="display: flex;">
+        <div>
+            <div>LOCAL VIDEO</div>
+            <video id="local_video_01" muted></video>
+        </div>
+        <div>
+            <div>REMOTE VIDEO</div>
+            <video id="remote_video_01" autoplay></video>
+        </div>
+    </div>
+    <div style="background-color:cadetblue;">TERM 2</div>
+    <div style="display: flex;">
+        <div>
+            <div>LOCAL VIDEO</div>
+            <video id="local_video_02" muted></video>
+        </div>
+        <div>
+            <div>REMOTE VIDEO</div>
+            <video id="remote_video_02" autoplay></video>
+        </div>
+    </div>
+</body>
+<script>
+    const $local_video_01 = document.getElementById("local_video_01");
+    const $remote_video_01 = document.getElementById("remote_video_01");
+    const $local_video_02 = document.getElementById("local_video_02");
+    const $remote_video_02 = document.getElementById("remote_video_02");
+
+    let stream_01;
+    let stream_02;
+    let peer1;
+    let peer2;
+    
+    (async function(){
+        stream_01 = await getStream($local_video_01);
+        stream_02 = await getStream($local_video_02);
+        peer1 = new P2P({
+            name: "peer1",
+            my_id: "01", 
+            remote_id: "02", 
+            stream: stream_01,
+            direction: "sendrecv",
+            type: "both"
+        });
+        peer2 = new P2P({
+            name: "peer2",
+            my_id: "02",
+            remote_id: "01",
+            stream: stream_02,
+            direction: "sendrecv",
+            type: "both"
+        });
+
+        await peer1.on("call_in", (stream) => {
+            $remote_video_01.srcObject = stream;
+            $remote_video_01.play();
+        });
+        await peer2.on("call_in", (stream) => {
+            $remote_video_02.srcObject = stream;
+            $remote_video_02.play();
+        });
+        await peer1.call_in();
+    })();
+</script>
+<style>
+video {
+    width: 300px;
+}
+</style>
+</html>

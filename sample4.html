@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="p2p.js"></script>
+</head>
+<body>
+    <h1>サンプル４</h1>
+    <p>片方向接続で、発呼側から音声を送信するタイプ</p>
+    <p>LOCALをクリックすると対向先のREMOTEが着信します。</p>
+    <div style="background-color:cadetblue;">端末 1</div>
+    <div style="display: flex;">
+        <div>
+            <div id="local_ptt_01" class="PTT">LOCAL AUDIO</div>
+        </div>
+        <div>
+            <div id="remote_ptt_01" class="PTT">REMOTE AUDIO</div>
+            <audio id="remote_audio_01"></audio>
+        </div>
+    </div>
+    <div style="background-color:cadetblue;">端末 2</div>
+    <div style="display: flex;">
+        <div>
+            <div id="local_ptt_02" class="PTT">LOCAL AUDIO</div>
+        </div>
+        <div>
+            <div id="remote_ptt_02" class="PTT">REMOTE AUDIO</div>
+            <audio id="remote_audio_02"></audio>
+        </div>
+    </div>
+    <div id="box"></div>
+</body>
+<script>
+    const $local_ptt_01 = document.getElementById("local_ptt_01");
+    const $remote_ptt_02 = document.getElementById("remote_ptt_02");
+    const $remote_audio_02 = document.getElementById("remote_audio_02");
+
+    const $local_ptt_02 = document.getElementById("local_ptt_02");
+    const $remote_ptt_01 = document.getElementById("remote_ptt_01");
+    const $remote_audio_01 = document.getElementById("remote_audio_01");
+
+    const $box = document.getElementById("box");
+
+    (async function(){
+        stream_01 = await getStream(null, { video: false, audio: true });
+        peer11 = new P2P({
+            name: "peer11",
+            my_id: "11",
+            remote_id: "12",
+            stream: stream_01,
+            direction: "sendonly",
+            type: "audio"
+        });
+        peer12 = new P2P({
+            name: "peer12",
+            my_id: "12",
+            remote_id: "11",
+            // stream: stream_02,
+            direction: "recvonly",
+            type: "audio"
+        });
+
+        // stats(peer11.pc, $box);
+        // callee
+        await peer12.on("call_in", (stream) => {
+            $remote_audio_02.srcObject = stream;
+            $remote_audio_02.play();
+            $remote_ptt_02.classList.add("callee")
+        });
+
+        await peer12.on("call_out", () => {
+            $remote_ptt_02.classList.remove("callee")
+        });
+
+        $local_ptt_01.onclick = () => {
+            if ($local_ptt_01.classList.contains("caller")) {
+                peer11.call_out();
+            } else {
+                peer11.call_in();
+            }
+            $local_ptt_01.classList.toggle("caller");
+        }
+
+    })();
+
+    (async function () {
+        stream_02 = await getStream(null, { video: false, audio: true });
+        peer21 = new P2P({
+            name: "peer21",
+            my_id: "22",
+            remote_id: "21",
+            stream: stream_02,
+            direction: "sendonly",
+            type: "audio"
+        });
+        peer22 = new P2P({
+            name: "peer22",
+            my_id: "21",
+            remote_id: "22",
+            // stream: stream_02,
+            direction: "recvonly",
+            type: "audio"
+        });
+
+        // stats(peer1.pc, $box);
+        // callee
+        await peer22.on("call_in", (stream) => {
+            $remote_audio_01.srcObject = stream;
+            $remote_audio_01.play();
+            $remote_ptt_01.classList.add("callee")
+        });
+
+        await peer22.on("call_out", () => {
+            $remote_ptt_01.classList.remove("callee")
+        });
+
+        $local_ptt_02.onclick = () => {
+            if ($local_ptt_02.classList.contains("caller")) {
+                peer21.call_out();
+            } else {
+                peer21.call_in();
+            }
+            $local_ptt_02.classList.toggle("caller");
+        }
+    })();
+
+</script>
+<style>
+.PTT {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background-color: cornflowerblue;
+    color: white;
+    text-align:center;
+    line-height: 200px;
+}
+
+.caller {
+    background-color: red;
+}
+.callee {
+    background-color: green;
+}
+</style>
+</html>
