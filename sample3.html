@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="p2p.js"></script>
+    <!-- <script src="p2p.js"></script> -->
 </head>
 <body>
     <h1>サンプル３</h1>
@@ -33,68 +33,68 @@
         </div>
     </div>
 </body>
-<script>
+<script type="module">
+    import {P2P, getStream, stats} from "./p2p.js"
     const $local_video_01 = document.getElementById("local_video_01");
     const $remote_video_01 = document.getElementById("remote_video_01");
     const $local_video_02 = document.getElementById("local_video_02");
     const $remote_video_02 = document.getElementById("remote_video_02");
 
-    
-    let peer1, peer2;
     (async function () {
         const stream_01 = await getStream($local_video_01);
-        peer1 = new P2P({
-            my_id: "01",
-            remote_id: "02",
+        const stream_02 = await getStream($local_video_02);
+
+        // ----------------------------------------
+        const peer11 = new P2P({
+            my_id: "11",
+            remote_id: "22",
             stream: stream_01,
             direction: "sendonly",
             type: "both"
         });
-        peer2 = new P2P({
-            my_id: "02",
-            remote_id: "01",
+        const peer22 = new P2P({
+            my_id: "22",
+            remote_id: "11",
             // stream: stream_02,
             direction: "recvonly",
             type: "both"
         });
 
-        // callee
-        await peer2.on("call_in", (stream) => {
-            $remote_video_02.srcObject = stream;
-            $remote_video_02.play();
-        });
-
-        // caller
-        await peer2.call_in();
-    })();
-
-    (async function () {
-        const stream_02 = await getStream($local_video_02);
-        peer1 = new P2P({
-            my_id: "01",
-            remote_id: "02",
+        // ----------------------------------------
+        const peer12 = new P2P({
+            my_id: "12",
+            remote_id: "21",
             // stream: stream_01,
             direction: "recvonly",
             type: "both"
         });
-        peer2 = new P2P({
-            my_id: "02",
-            remote_id: "01",
+        const peer21 = new P2P({
+            my_id: "21",
+            remote_id: "12",
             stream: stream_02,
             direction: "sendonly",
             type: "both"
         });
+        // ----------------------------------------        
 
         // callee
-        await peer1.on("call_in", (stream) => {
-            $remote_video_01.srcObject = stream;
-            $remote_video_01.play();
+        await peer22.on("call_in", async (stream) => {
+            $remote_video_02.srcObject = stream;
+            await $remote_video_02.play();
         });
 
         // caller
-        await peer1.call_in();
-    })();
+        await peer22.call_in();
 
+        // callee
+        await peer12.on("call_in",  async (stream) => {
+            $remote_video_01.srcObject = stream;
+            await $remote_video_01.play();
+        });
+
+        // caller
+        await peer12.call_in();
+    })();
 </script>
 <style>
 video {

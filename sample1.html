@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="p2p.js"></script>
+    <!-- <script src="p2p.js"></script> -->
 </head>
 <body>
     <h1>サンプル１</h1>
@@ -33,7 +33,8 @@
         </div>
     </div>
 </body>
-<script>
+<script type="module">
+    import {P2P, getStream, stats} from "./p2p.js"
     const $local_video_01 = document.getElementById("local_video_01");
     const $remote_video_01 = document.getElementById("remote_video_01");
     const $local_video_02 = document.getElementById("local_video_02");
