@@ -23,8 +23,8 @@
 
 
 // import io from "socket.io-client";
-export function P2P (args) {
-    
+export function P2P(args) {
+
     this.name = args.name
     //--------------------------------------------------
     // LOG
@@ -124,7 +124,7 @@ export function P2P (args) {
             if (!this.audio_transceiver) {
                 if (this.type == "both" || this.type == "audio") {
                     this.audio_transceiver = this.pc.addTransceiver("audio", { direction: "recvonly" });
-                }                                
+                }
             }
             if (!this.video_transceiver) {
                 if (this.type == "both" || this.type == "video") {
@@ -134,7 +134,7 @@ export function P2P (args) {
         }
 
         this.pc.getTransceivers().forEach(t => {
-            this.LOG("TRANSCEIVER", `direct=${t.direction} sender=${t.sender.track ? t.sender.track.kind : "null"}`, "color:red; font-size: large" )
+            this.LOG("TRANSCEIVER", `direct=${t.direction} sender=${t.sender.track ? t.sender.track.kind : "null"}`, "color:red; font-size: large")
         })
     }
 
@@ -162,8 +162,7 @@ export function P2P (args) {
 
     this.socketio.on("publish", async (msg) => {
         const data = JSON.parse(msg);
-        if (data.src == this.my_id || data.dest != this.my_id) return;
-        // if (data.src == this.my_id) return;
+        if (!(data.src == this.remote_id && data.dest == this.my_id)) return;
 
         if (data.type == "offer") {
             this.LOG("OFFER", msg);
@@ -198,7 +197,7 @@ export function P2P (args) {
             }
         }
     });
-    
+
     //--------------------------------------------------
     // remote_direction
     //--------------------------------------------------
@@ -287,7 +286,7 @@ export async function getStream(elm, mConstruction) {
         await elm.play();
     }
     return await stream;
-} 
+}
 
 // <<使い方>>
 //
@@ -318,6 +317,6 @@ export function stats(pc, elm) {
 
             elm.innerHTML = statsOutput;
         });
-    }, 1000);    
-    this.clear = () => { clearInterval(this.timerId);}
+    }, 1000);
+    this.clear = () => { clearInterval(this.timerId); }
 }

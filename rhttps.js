@@ -1,4 +1,4 @@
-var PORT = 10443;
+var PORT = 8443;
 var SSL_KEY = 'server.key';
 var SSL_CERT = 'server.crt';
 
@@ -129,7 +129,7 @@ io.on("connection", function (socket) {
         console.dir(user_sid);
         socket.broadcast.emit("regist", JSON.stringify({ id: _id }));//現在、誰も受信していない
         // socket.emit("alldraw", JSON.stringify(allDraw));
-        io.to(group_id).emit("alldraw", JSON.stringify(allDraw[group_id]));
+        // io.to(group_id).emit("alldraw", JSON.stringify(allDraw[group_id]));
     });
 
 
@@ -177,8 +177,8 @@ io.on("connection", function (socket) {
         LOG(USER_LIST_LOG_FLAG, `DISCONNECT msg=${reason}`);
         console.log(`socket.id=${socket.id}`);
         // if (reason.indexOf("transport error") != -1) {
-        Object.keys(user_sid).forEach(function(_id){
-            if (user_sid[_id] == socket.id){
+        Object.keys(user_sid).forEach(function (_id) {
+            if (user_sid[_id] == socket.id) {
                 delete userHash[_id];
                 delete user_sid[_id];
                 delete user_gid[_id];
