@@ -39,43 +39,54 @@
     const $remote_video_01 = document.getElementById("remote_video_01");
     const $local_video_02 = document.getElementById("local_video_02");
     const $remote_video_02 = document.getElementById("remote_video_02");
+    const socketio_01 = io.connect();
+    const socketio_02 = io.connect();
 
     (async function () {
         const stream_01 = await getStream($local_video_01);
         const stream_02 = await getStream($local_video_02);
 
-        // ----------------------------------------
+        // ---------------------------------------------
+        socketio_01.emit("regist", JSON.stringify({ id: "11", group_id: "g1" }));
+        socketio_02.emit("regist", JSON.stringify({ id: "22", group_id: "g1" }));
+        // ---------------------------------------------
         const peer11 = new P2P({
             my_id: "11",
             remote_id: "22",
             stream: stream_01,
-            direction: "sendonly",
+            socket: socketio_01,
+            // direction: "sendonly",
             type: "both"
         });
         const peer22 = new P2P({
             my_id: "22",
             remote_id: "11",
             // stream: stream_02,
-            direction: "recvonly",
+            socket: socketio_02,
+            // direction: "recvonly",
             type: "both"
         });
 
-        // ----------------------------------------
+        // ---------------------------------------------
+        socketio_01.emit("regist", JSON.stringify({ id: "12", group_id: "g1" }));
+        socketio_02.emit("regist", JSON.stringify({ id: "21", group_id: "g1" }));
+        // ---------------------------------------------
         const peer12 = new P2P({
             my_id: "12",
             remote_id: "21",
             // stream: stream_01,
-            direction: "recvonly",
+            socket: socketio_01,
+            // direction: "recvonly",
             type: "both"
         });
         const peer21 = new P2P({
             my_id: "21",
             remote_id: "12",
             stream: stream_02,
-            direction: "sendonly",
+            socket: socketio_02,
+            // direction: "sendonly",
             type: "both"
         });
-        // ----------------------------------------        
 
         // callee
         await peer22.on("call_in", async (stream) => {
@@ -84,7 +95,7 @@
         });
 
         // caller
-        await peer22.call_in();
+        await peer22.call_in("recvonly");
 
         // callee
         await peer12.on("call_in",  async (stream) => {
@@ -93,7 +104,7 @@
         });
 
         // caller
-        await peer12.call_in();
+        await peer12.call_in("recvonly");
     })();
 </script>
 <style>

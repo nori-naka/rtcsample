@@ -35,7 +35,7 @@ const LOG = function (flag, msg) {
 }
 // LOG FLAG
 USER_LIST_LOG_FLAG = false;
-MSG_LOG_FLAG = true;
+MSG_LOG_FLAG = false;
 SERVER_LOG_FLAG = false;
 
 // var allDraw = [];
@@ -142,7 +142,7 @@ io.on("connection", function (socket) {
         } else {
             socket.broadcast.emit("publish", msg);
         }
-        console.log(`PUBLISH MSG: ${msg}`);
+        LOG(MSG_LOG_FLAG, `PUBLISH MSG: ${msg}`);
     });
 
     // PING
@@ -175,15 +175,16 @@ io.on("connection", function (socket) {
     socket.on("disconnect", function (reason) {
         // console.log(`DISCONNECT msg=${reason}`);
         LOG(USER_LIST_LOG_FLAG, `DISCONNECT msg=${reason}`);
-        //console.log(`socket.id=${socket.id}`);
-        //if (reason.indexOf("transport error") != -1) {
-        // Object.keys(user_sid).forEach(function(_id){
-        //     if (user_sid[_id] == socket.id){
-        //         delete userHash[_id];
-        //         delete user_sid[_id];
-        //         io.sockets.emit("user_disconnect", JSON.stringify({ id: _id}));
-        //     }
-        // });
+        console.log(`socket.id=${socket.id}`);
+        // if (reason.indexOf("transport error") != -1) {
+        Object.keys(user_sid).forEach(function(_id){
+            if (user_sid[_id] == socket.id){
+                delete userHash[_id];
+                delete user_sid[_id];
+                delete user_gid[_id];
+                // io.sockets.emit("user_disconnect", JSON.stringify({ id: _id}));
+            }
+        });
     });
 
     // 接続終了(接続元ユーザを削除し、他ユーザへ通知)
@@ -238,6 +239,7 @@ setInterval(function () {
 
 setInterval(function () {
     // io.emit("renew", JSON.stringify(userHash));
+    LOG(USER_LIST_LOG_FLAG, `SEND RENEW=${JSON.stringify(userHash)}`)
     Object.keys(userHash).forEach(function (group_id) {
         io.to(group_id).emit("renew", JSON.stringify(userHash[group_id]));
     });

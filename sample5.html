@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- <script src="p2p.js"></script> -->
+</head>
+<body>
+    <h1>サンプル５</h1>
+    <p>片方向接続で、発呼側から音声を送信するタイプ</p>
+    <p>LOCALをクリックすると対向先のREMOTEが着信します。</p>
+    <div id="ptt" class="PTT">PTT</div>
+</body>
+<script type="module">
+    import {P2G} from "./p2g.js";
+    const $ptt = document.getElementById("ptt");
+
+    const callback = {
+        call_in_effect: () => { $ptt.classList.add("callee") },
+        call_out_effect: () => { $ptt.classList.remove("callee") },
+    }
+    const p2g = P2G($ptt, callback);
+    $ptt.onclick = () => {
+        if ($ptt.classList.contains("caller")) {
+            p2g.call_out();
+            $ptt.classList.remove("caller");
+        } else {
+            p2g.call_in();
+            $ptt.classList.add("caller");
+        }
+    }
+</script>
+<style>
+.PTT {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: cornflowerblue;
+    color: white;
+    text-align:center;
+    line-height: 150px;
+    user-select: none;
+}
+
+.caller {
+    background-color: red;
+}
+.callee {
+    background-color: green;
+}
+</style>
+</html>

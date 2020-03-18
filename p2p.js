@@ -31,8 +31,8 @@ export function P2P (args) {
     //--------------------------------------------------
     const self = this;
     this.LOG = function (title, s, style) {
-        const NO_DISP = ["OFFER", "ANSWER", "ICE"]
-        // const NO_DISP = []
+        // const NO_DISP = ["OFFER", "ANSWER", "ICE"]
+        const NO_DISP = []
         if (NO_DISP.includes(title)) return;
 
         if (style) {
@@ -52,7 +52,7 @@ export function P2P (args) {
         ]
     };
 
-    if (!args.my_id || !args.remote_id || !args.direction || !args.type) {
+    if (!args.my_id || !args.remote_id || !args.type) {
         throw new Error("missing setting(args.XXX)");
     }
 
@@ -61,13 +61,13 @@ export function P2P (args) {
     this.remote_id = args.remote_id;
     this.group_id = args.group_id || "g1";
     this.stream = args.stream;
-    this.direction = args.direction;
+    // this.direction = args.direction;
     this.type = args.type;
 
     //--------------------------------------------------
     // Regist
     //--------------------------------------------------
-    this.socketio.emit("regist", JSON.stringify({ id: this.my_id, group_id: this.group_id }));
+    // this.socketio.emit("regist", JSON.stringify({ id: this.my_id, group_id: this.group_id }));
 
     //--------------------------------------------------
     // PeerConnection
@@ -75,15 +75,32 @@ export function P2P (args) {
     this.pc = new RTCPeerConnection(options);
 
     //--------------------------------------------------
+    // destroy
+    //--------------------------------------------------
+    this.close = () => {
+        this.pc.close();
+        this.addTrack = null;
+        this.pc.onicecandidate = null;
+        this.pc.onsignalingstatechange = null;
+        this.pc.oniceconnectionstatechange = null;
+        this.call_in = null;
+        this.call_out = null;
+        this.callback = null;
+        this.on = null;
+        this.pc.ontrack = null;
+        this.pc = null;
+    }
+
+    //--------------------------------------------------
     // addTrack
     //--------------------------------------------------
-    this.addTrack = () => {
-        if (this.direction == "sendrecv" || this.direction == "sendonly") {
+    this.addTrack = (local_direction) => {
+        if (local_direction == "sendrecv" || local_direction == "sendonly") {
             if (this.type == "both" || this.type == "audio") {
                 if (this.stream) {
                     const audio_track = this.stream.getAudioTracks()[0];
                     if (this.audio_sender) {
-                        this.pc.getTransceivers().forEach(t => { t.direction = this.direction });
+                        this.pc.getTransceivers().forEach(t => { t.direction = local_direction });
                     } else {
                         this.audio_sender = this.pc.addTrack(audio_track, this.stream);
                     }
@@ -95,7 +112,7 @@ export function P2P (args) {
                 if (this.stream) {
                     const video_track = this.stream.getVideoTracks()[0];
                     if (this.video_sender) {
-                        this.pc.getTransceivers().forEach(t => { t.direction = this.direction });
+                        this.pc.getTransceivers().forEach(t => { t.direction = local_direction });
                     } else {
                         this.video_sender = this.pc.addTrack(video_track, this.stream);
                     }
@@ -103,7 +120,7 @@ export function P2P (args) {
                     throw new Error("Setting ERROR(video)");
                 }
             }
-        } else if (this.direction == "recvonly") {
+        } else if (local_direction == "recvonly") {
             if (!this.audio_transceiver) {
                 if (this.type == "both" || this.type == "audio") {
                     this.audio_transceiver = this.pc.addTransceiver("audio", { direction: "recvonly" });
@@ -132,20 +149,31 @@ export function P2P (args) {
             this.LOG("ICE", JSON.stringify(data));
             this.LOG("ICE", `SEND to ${data.dest}`);
             this.socketio.emit("publish", JSON.stringify(data));
-            // this.socketio.emit("publish", data);
         }
     }
-    this.pc.addEventListener('signalingstatechange', () => this.LOG("SIGNAL", this.pc.signalingState));
+    this.pc.addEventListener('signalingstatechange', () => {
+        if (this.pc) {
+            this.LOG("SIGNAL", this.pc.signalingState)
+        } else {
+            console.dir(this);
+        }
+    });
     this.pc.addEventListener('iceconnectionstatechange', () => this.LOG("CONNECT", this.pc.iceConnectionState));
+
     this.socketio.on("publish", async (msg) => {
         const data = JSON.parse(msg);
-        if (data.src == this.my_id) return;
+        if (data.src == this.my_id || data.dest != this.my_id) return;
+        // if (data.src == this.my_id) return;
 
         if (data.type == "offer") {
             this.LOG("OFFER", msg);
-            await this.addTrack();
-            // const sdp = new RTCSessionDescription(data);
-            // await this.pc.setRemoteDescription(sdp);
+            try {
+                if (this.pc.signalingState != "stable") return;
+            } catch (err) {
+                this.LOG("ERR", `this.my_id=${this.my_id}`, "color:red; font-size: large;")
+            }
+
+            await this.addTrack(data.direction);
             await this.pc.setRemoteDescription(data);
             await this.pc.createAnswer().then(answer => this.pc.setLocalDescription(answer));
             const _data = {
@@ -155,38 +183,44 @@ export function P2P (args) {
                 sdp: this.pc.localDescription.sdp
             }
             this.socketio.emit("publish", JSON.stringify(_data));
-            // this.socketio.emit("publish", _data);
-            // this.LOG("LOCAL SDP", JSON.stringify(_data));
             this.LOG("SDP", `SEND to ${_data.dest}`);
         } else if (data.type == "answer") {
             this.LOG("ANSWER", msg);
-            // const sdp = new RTCSessionDescription(data);
-            // await this.pc.setRemoteDescription(sdp);
+            if (this.pc.signalingState != "have-local-offer") return;
             await this.pc.setRemoteDescription(data);
         } else if (data.type == "candidate") {
             this.LOG("ICE", msg);
             try {
-                // const candidate = new RTCIceCandidate(data.candidate);
                 await this.pc.addIceCandidate(data.candidate);
             } catch (err) {
-                console.log(`CANDIDATE ERRO=${err}`);
-                console.log(JSON.stringify(data.candidate));
-                // console.log(JSON.stringify(candidate));
+                this.LOG("ERR", `CANDIDATE ERRO=${err}`);
+                // console.log(JSON.stringify(data.candidate));
             }
         }
     });
     
     //--------------------------------------------------
+    // remote_direction
+    //--------------------------------------------------
+    this.remote_direction = (local_direction) => {
+        if (local_direction == "sendrecv") return "sendrecv";
+        else if (local_direction == "sendonly") return "recvonly";
+        else if (local_direction == "recvonly") return "sendonly";
+        else return "inactive";
+    }
+
+    //--------------------------------------------------
     // 発呼
     //--------------------------------------------------
-    this.call_in = async () => {
+    this.call_in = async (local_direction) => {
 
-        this.addTrack();
+        this.addTrack(local_direction);
         await this.pc.createOffer().then(offer => this.pc.setLocalDescription(offer));
         const data = {
             dest: this.remote_id,
             src: this.my_id,
             type: "offer",
+            direction: this.remote_direction(local_direction),
             sdp: this.pc.localDescription.sdp,
         }
         // this.LOG("LOCAL SDP", JSON.stringify(data));
@@ -208,6 +242,7 @@ export function P2P (args) {
             dest: this.remote_id,
             src: this.my_id,
             type: "offer",
+            direction: "recvonly",
             sdp: this.pc.localDescription.sdp,
         }
         // this.LOG("LOCAL SDP", JSON.stringify(data));
@@ -251,7 +286,6 @@ export async function getStream(elm, mConstruction) {
         elm.srcObject = stream;
         await elm.play();
     }
-
     return await stream;
 } 
 

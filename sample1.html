@@ -32,6 +32,7 @@
             <video id="remote_video_02" autoplay></video>
         </div>
     </div>
+    <div id="box"></div>
 </body>
 <script type="module">
     import {P2P, getStream, stats} from "./p2p.js"
@@ -39,6 +40,9 @@
     const $remote_video_01 = document.getElementById("remote_video_01");
     const $local_video_02 = document.getElementById("local_video_02");
     const $remote_video_02 = document.getElementById("remote_video_02");
+    const $box = document.getElementById("box");
+    const socketio_01 = io.connect();
+    const socketio_02 = io.connect();
 
     let stream_01;
     let stream_02;
@@ -52,18 +56,22 @@
             name: "peer1",
             my_id: "01", 
             remote_id: "02", 
+            socket: socketio_01,
             stream: stream_01,
-            direction: "sendrecv",
+            // direction: "sendrecv",
             type: "both"
         });
         peer2 = new P2P({
             name: "peer2",
             my_id: "02",
             remote_id: "01",
+            socket: socketio_02,
             stream: stream_02,
-            direction: "sendrecv",
+            // direction: "sendrecv",
             type: "both"
         });
+        socketio_01.emit("regist", JSON.stringify({ id: "01", group_id: "g1" }));
+        socketio_02.emit("regist", JSON.stringify({ id: "02", group_id: "g1" }));
 
         await peer1.on("call_in", (stream) => {
             $remote_video_01.srcObject = stream;
@@ -73,8 +81,11 @@
             $remote_video_02.srcObject = stream;
             $remote_video_02.play();
         });
-        await peer1.call_in();
+        await peer1.call_in("sendrecv");
+
     })();
+            
+
 </script>
 <style>
 video {
